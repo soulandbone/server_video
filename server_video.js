@@ -13,13 +13,16 @@ app.use("/segments", express.static(path.join(__dirname, "segments")));
 const segmentsDir = path.join(__dirname, "segments");
 
 let currentSegments = ["segment0.ts", "segment1.ts", "segment2.ts"];
-let mediaSequence = 2;
+let mediaSequence = 0;
+let discontinuityFlag = false;
 
 function generatePlaylist() {
+  const discontinuityTag = discontinuityFlag ? "#EXT-X-DISCONTINUITY\n" : "";
   return `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:${mediaSequence}
+${discontinuityTag}
 ${currentSegments.map((s) => `#EXTINF:10,\nsegments/${s}`).join("\n")} 
 `;
 }
@@ -48,15 +51,27 @@ console.log("Last segment number:", lastNumber);
 setInterval(updatePlaylist, 10000);
 
 function updatePlaylist() {
-  currentSegments.shift();
+  currentSegments.shift(); //sacamos el ultimo (primer elemento en la lista) 62
   if (mediaSequence === lastNumber) {
-    mediaSequence = 0; // resets the logic
+    mediaSequence = 0;
+    discontinuityFlag = true;
+    currentSegments = ["segment0.ts", "segment1.ts", "segment2.ts"];
+    generatePlaylist(); //testing
+    // resets the logic
   } else {
     mediaSequence += 1;
+    newSequenceNumber = mediaSequence + 2;
+    if (newSequenceNumber > lastNumber) {
+      newSequenceNumber = newSequenceNumber - (lastNumber + 1);
+    }
+    newSequenceName = `segment${newSequenceNumber}.ts`;
+    currentSegments.push(newSequenceName);
+
+    if (discontinuityFlag) {
+      discontinuityFlag = false;
+    }
   }
   console.log("Media Sequence", mediaSequence);
-  newSequenceName = `segment${mediaSequence}.ts`;
-  currentSegments.push(newSequenceName);
   console.log(`La lista actual es ${currentSegments}`);
 }
 
